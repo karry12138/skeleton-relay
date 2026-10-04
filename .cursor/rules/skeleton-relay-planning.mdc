@@ -1,0 +1,57 @@
+---
+description: skeleton-relay 规划阶段：为本地弱模型产出可交接的代码骨架、SPEC.md、TASKS.md 和测试。用户要求"做骨架/规划任务/skeleton-relay 规划"时使用。
+alwaysApply: false
+---
+
+# skeleton-relay 规划阶段
+
+你是规划者。产出物会冻结后交给**只能看到单个任务上下文**的本地弱模型实现，所以一切必须写明，不能留给它推断。本阶段**不写任何实现**。
+
+## 产出物（目标项目根目录）
+
+| 文件 | 来源 | 要求 |
+|---|---|---|
+| `SPEC.md` | `templates/SPEC.md` | 填满 7 节；接口表里每个公开符号都对应一个任务 id |
+| `TASKS.md` | `templates/TASKS.md` | 格式与字段说明见模板注释 |
+| `relay.yaml` | `templates/relay.yaml` | 按项目调整 `protected` 与 `test_cmd` |
+| 骨架代码 | — | 见下 |
+| `tests/` | — | 见下 |
+
+## 骨架代码
+
+- 公开函数/类/方法写全：签名、完整类型标注、docstring（行为、参数、返回、抛出的异常）。
+- 函数体只写 `raise NotImplementedError("T00x")`，标注负责的任务 id。
+- 数据类型、异常类、常量、枚举直接写完整（它们是接口，不是实现），放在单独文件中并列入各任务的 `read_only`。
+- 模块可以直接 import，`pytest --collect-only` 不能报错。
+
+## 测试（弱模型必须满足的契约）
+
+- 覆盖 SPEC 中的正常路径、边界和每一种错误；断言具体值和异常消息。
+- 在骨架上运行时应因 `NotImplementedError` 失败，而不是 ImportError 或语法错误。
+- 测试文件属于 `protected`，任何任务都不能修改。
+
+## 任务拆分
+
+- 一个任务只改 1～2 个文件，新增实现约 150 行以内；超过就拆分。
+- `files` 只列需要填实现的文件；签名冻结，只能改函数体，也不能新增公开符号。
+- `read_only` 列出实现时要读的一切：`SPEC.md`、类型/异常定义、要调用的模块。
+- `instructions` 要自洽：算法要点、边界处理、要抛的异常及消息、要调用的已有函数。不要写"见上文""参考 T001"。
+- `acceptance` 写具体的 pytest 节点 id，每个任务至少一个；后面的任务可以加端到端测试。
+- `depends_on` 只写真实依赖（要调用对方的实现才能通过测试）。
+- `status: todo`、`attempts: 0`、`last_error: null` 照写，由编排器维护。
+
+## 自检后交付
+
+```powershell
+conda activate skeleton-relay   # 已 pip install -e skeleton-relay 仓库，提供 relay 命令
+relay validate .
+relay list .
+python -m pytest --collect-only -q
+```
+
+三条命令都通过后，向用户汇报任务数、依赖顺序和需要人工确认的设计决策，然后**停下**。
+不要自己打 tag。用户审核通过后执行：
+
+```powershell
+git add -A; git commit -m "skeleton: 定稿"; git tag skeleton-v1
+```

@@ -1,0 +1,16 @@
+# skeleton-relay 项目配置，放在目标项目根目录。
+skeleton_tag: skeleton-v1          # 骨架定稿时打的 git tag，接口保护以此为基准
+tasks_file: TASKS.md
+test_cmd: python -m pytest -q {acceptance}   # {acceptance} 替换为任务的 acceptance 列表
+
+# 整文件冻结，任何任务的 files 都不得命中（fnmatch 语法，* 可跨目录）
+protected:
+- SPEC.md
+- relay.yaml
+- tests/*
+
+executor:
+  kind: aider                      # aider | dsh
+  base_url: http://<vllm-host>/v1
+  model: deepseek-v4-flash-vision-exp
+  max_attempts: 3
