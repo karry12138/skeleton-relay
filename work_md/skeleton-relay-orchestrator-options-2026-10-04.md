@@ -246,12 +246,22 @@ Get-Content task-007.prompt.md -Raw | pnpm dsh --profile headless --json - > log
 |---|---|---|---|---|---|---|---|
 | 思考关，temperature 0 | 首轮通过 24s | 首轮通过 23s | 首轮通过 17s | 64s | 1.6k | 0 | 0 |
 | 思考开，temperature 0 | 3 次均耗尽 16k 输出 token，手动终止 | — | — | — | — | — | — |
-| 思考开，temperature 0.6 | 首轮通过 132s | 首轮通过 155s | 首轮通过 62s | 349s | 15.2k | 1（aider 自行修复） | 0 |
+| 思考 high，temperature 0.6 | 首轮通过 132s | 首轮通过 155s | 首轮通过 62s | 349s | 15.2k | 1（aider 自行修复） | 0 |
+| 思考 low，不发送 temperature | 首轮通过 64s | 首轮通过 120s | 首轮通过 59s | 243s | 8.9k | 0 | 0 |
+| 思考 high，不发送 temperature（同 dsh） | 首轮通过 113s | 首轮通过 97s | 首轮通过 65s | 275s | 10.0k | 0 | 0 |
+
+**服务端事实**（详见同目录 `high-request-and-vllm-defaults-2026-10-04.md`）
+
+- `--default-chat-template-kwargs '{"thinking":true,"reasoning_effort":"high"}'`：不传参数即为 high；请求中的 `chat_template_kwargs` 会覆盖它。
+- boot 补丁：`reasoning_effort` 只有 `high`、`max`/`xhigh`→`max` 两档被保留，其余（含 `medium`）一律为 `low`。
+- `--generation-config vllm` + dsh 不发送 temperature → dsh 实际使用 vLLM 默认采样（temperature 1.0）；aider 默认发送 0，这是开思考后重复退化的根因。
+- `--max-num-seqs 6`：后续并行执行任务时，并发上限为 6。
+- `--enable-prefix-caching`：同一任务的重试共享前缀，可降低重试成本。
 
 **结论与注意事项**
 
-- 关闭思考（`chat_template_kwargs: {thinking: false}`）即可稳定完成此粒度的任务，速度约为开思考的 5 倍，作为默认配置。
-- 开思考 + temperature 0 会陷入重复退化（同一句话重复上千次直至耗尽 `max_tokens`）；开思考必须设 temperature ≈ 0.6。
-- `reasoning_effort`（顶层或 `chat_template_kwargs`）在简单提示上看不出明显效果，未定论。
+- 关闭思考（`chat_template_kwargs: {thinking: false}`）即可稳定完成此粒度的任务，速度约为开思考的 4～5 倍，作为默认配置。
+- 开思考时不要发送 temperature 0：要么不发送（与 dsh 一致），要么设 0.6 左右。配置项：`thinking: off|low|high|max`，`temperature: null` 表示不发送。
+- 在这个简单骨架上，low 和 high 的耗时、token 差别不大；更难的骨架上再比较思考档位。
 - 风险：模型回复中提及 `tests/...` 文件名，aider 在 `--yes-always` 下可能把它加入对话变为可编辑；本轮未发生，靠 `guard` 兜底。
 - 本骨架偏简单，尚不能区分 aider 与 dsh；A/B 评估需要更难的骨架（跨文件调用、更长实现、更易越界的任务）。

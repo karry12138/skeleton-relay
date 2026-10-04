@@ -15,7 +15,7 @@ executor:
   model: deepseek-v4-flash-vision-exp
   max_attempts: 3
   edit_format: diff
-  thinking: false                  # 服务端默认思考强度 high；开启时务必设 temperature
-  temperature: 0.0                 # 开启思考时用 0.6，0 会陷入重复直到耗尽 max_tokens
+  thinking: "off"                  # off | low | high | max；服务端默认 high
+  temperature: 0.0                 # 开思考时不要用 0（会重复退化）；填 null 则不发送，用服务端默认（同 dsh）
   max_tokens: 32768
   context_window: 1048576          # 服务端 max_model_len

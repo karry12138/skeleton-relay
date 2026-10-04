@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+THINKING_LEVELS = ("off", "low", "high", "max")
 
 @dataclass
 class ExecutorConfig:
@@ -16,11 +17,17 @@ class ExecutorConfig:
     api_key: str = "sk-local"
     max_attempts: int = 3
     edit_format: str = "diff"
-    thinking: bool = False
-    temperature: float = 0.0
+    thinking: str = "off"              # off | low | high | max；服务端补丁把其余取值都映射为 low
+    temperature: float | None = 0.0    # None 表示不发送，由 vLLM 服务端默认采样决定
     max_tokens: int = 32768
     context_window: int = 1048576
     timeout: int = 900
+
+    def __post_init__(self) -> None:
+        if isinstance(self.thinking, bool):
+            self.thinking = "high" if self.thinking else "off"
+        if self.thinking not in THINKING_LEVELS:
+            raise ValueError(f"thinking 必须是 {THINKING_LEVELS} 之一：{self.thinking!r}")
 
 
 @dataclass

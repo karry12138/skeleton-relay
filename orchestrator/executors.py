@@ -36,6 +36,13 @@ def _model_name(cfg: ExecutorConfig) -> str:
     return f"openai/{cfg.model}"
 
 
+def _thinking_kwargs(level: str) -> dict:
+    """覆盖服务端 --default-chat-template-kwargs（默认 thinking=true, reasoning_effort=high）。"""
+    if level == "off":
+        return {"thinking": False}
+    return {"thinking": True, "reasoning_effort": level}
+
+
 def write_model_files(cfg: ExecutorConfig, out_dir: Path) -> tuple[Path, Path]:
     """生成 aider 的模型设置与元数据文件，放在项目目录之外。"""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -45,10 +52,10 @@ def write_model_files(cfg: ExecutorConfig, out_dir: Path) -> tuple[Path, Path]:
             "name": name,
             "edit_format": cfg.edit_format,
             "use_repo_map": False,
-            "use_temperature": cfg.temperature,
+            "use_temperature": False if cfg.temperature is None else cfg.temperature,
             "extra_params": {
                 "max_tokens": cfg.max_tokens,
-                "extra_body": {"chat_template_kwargs": {"thinking": cfg.thinking}},
+                "extra_body": {"chat_template_kwargs": _thinking_kwargs(cfg.thinking)},
             },
         }
     ]

@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from orchestrator.config import load_config  # noqa: E402
+from orchestrator.config import THINKING_LEVELS, load_config  # noqa: E402
 from orchestrator.guard import run_git  # noqa: E402
 from orchestrator.runner import records_to_json, run  # noqa: E402
 
@@ -35,9 +35,10 @@ def setup_sandbox(example: Path, project: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--example", type=Path, default=REPO / "examples" / "calc")
-    parser.add_argument("--thinking", choices=["on", "off"], default="off")
+    parser.add_argument("--thinking", choices=THINKING_LEVELS, default="off")
     parser.add_argument("--edit-format", default=None)
-    parser.add_argument("--temperature", type=float, default=None)
+    parser.add_argument("--temperature", default=None,
+                        help="浮点数；none 表示不发送，使用服务端默认采样")
     parser.add_argument("--max-attempts", type=int, default=None)
     parser.add_argument("--name", default=None)
     args = parser.parse_args()
@@ -48,11 +49,11 @@ def main() -> int:
     setup_sandbox(args.example.resolve(), project)
 
     config = load_config(project / "relay.yaml")
-    config.executor.thinking = args.thinking == "on"
+    config.executor.thinking = args.thinking
     if args.edit_format:
         config.executor.edit_format = args.edit_format
     if args.temperature is not None:
-        config.executor.temperature = args.temperature
+        config.executor.temperature = None if args.temperature.lower() == "none" else float(args.temperature)
     if args.max_attempts:
         config.executor.max_attempts = args.max_attempts
 
