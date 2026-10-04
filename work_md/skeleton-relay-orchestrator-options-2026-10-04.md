@@ -225,8 +225,33 @@ Get-Content task-007.prompt.md -Raw | pnpm dsh --profile headless --json - > log
   - 整文件冻结：`read_only` + `protected` 相对 `skeleton-v1` 不得改动
   - 越界修改：相对 `--base`，只允许 `files` 中的文件变化（`TASKS.md` 除外，含未跟踪文件）
   - 签名冻结：`files` 中的 `.py` 用 `ast` 比对 `skeleton-v1`，骨架符号（函数/类/方法/类字段，含装饰器、默认值、返回注解）不得修改或删除，不得新增公开符号；允许新增 `_` 私有符号和函数体内的嵌套定义
-- [ ] 配置 aider 与 dsh 分别接入本地 DeepSeek Flash，用一个小任务验证可用性
+- [x] aider 接入本地 DeepSeek Flash 并冒烟通过（见 §9）
+- [ ] dsh 接入本地 DeepSeek Flash，用同一骨架冒烟
 - [ ] 按 §7.4 做执行层 A/B 评估，决定 aider 或 dsh
-- [ ] 实现脚本版最小可用版本：任务循环 + 测试 + 接口保护 + `blocked` 报告
+- [x] 脚本版核心循环 `orchestrator/runner.py`：任务循环 + 接口保护 + 验收测试 + 失败回滚重试（带上次错误）+ `blocked`
+- [ ] `blocked` 报告：汇总 diff + 报错 + 任务描述，供 Cursor 强模型处理
 - [ ] 用小项目端到端试跑，记录失败类型，迭代提示词与任务粒度
 - [ ] 评估是否满足 §6.2 的升级条件
+
+---
+
+## 9. aider 冒烟测试记录（2026-10-04）
+
+> **骨架**：`examples/calc`（四则运算计算器，3 个链式依赖任务，32 个测试；已用参考实现验证测试正确）
+> **命令**：`python scripts/smoke.py --thinking off|on [--temperature 0.6]`，每次在 `sandbox/<时间>-<名称>/` 新建仓库并打 `skeleton-v1`
+> **执行**：aider 0.86.2，`diff` 编辑格式，`--auto-test`，repo map 关闭
+> **服务**：vLLM `http://<vllm-host>:8888/v1`（注意端口 8888；需绕过本机代理 127.0.0.1:7897），`deepseek-v4-flash-vision-exp`，上下文 1M，默认思考强度 high
+
+| 配置 | T001 | T002 | T003 | 总耗时 | 输出 tokens | 格式错误 | 接口违规 |
+|---|---|---|---|---|---|---|---|
+| 思考关，temperature 0 | 首轮通过 24s | 首轮通过 23s | 首轮通过 17s | 64s | 1.6k | 0 | 0 |
+| 思考开，temperature 0 | 3 次均耗尽 16k 输出 token，手动终止 | — | — | — | — | — | — |
+| 思考开，temperature 0.6 | 首轮通过 132s | 首轮通过 155s | 首轮通过 62s | 349s | 15.2k | 1（aider 自行修复） | 0 |
+
+**结论与注意事项**
+
+- 关闭思考（`chat_template_kwargs: {thinking: false}`）即可稳定完成此粒度的任务，速度约为开思考的 5 倍，作为默认配置。
+- 开思考 + temperature 0 会陷入重复退化（同一句话重复上千次直至耗尽 `max_tokens`）；开思考必须设 temperature ≈ 0.6。
+- `reasoning_effort`（顶层或 `chat_template_kwargs`）在简单提示上看不出明显效果，未定论。
+- 风险：模型回复中提及 `tests/...` 文件名，aider 在 `--yes-always` 下可能把它加入对话变为可编辑；本轮未发生，靠 `guard` 兜底。
+- 本骨架偏简单，尚不能区分 aider 与 dsh；A/B 评估需要更难的骨架（跨文件调用、更长实现、更易越界的任务）。

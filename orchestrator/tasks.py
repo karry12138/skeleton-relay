@@ -62,6 +62,7 @@ class TaskFile:
     path: Path
     text: str
     tasks: list[Task]
+    newline: str = "\n"
 
     def get(self, task_id: str) -> Task:
         for task in self.tasks:
@@ -144,8 +145,10 @@ def parse_tasks(text: str) -> list[Task]:
 
 def load_tasks(path: str | Path) -> TaskFile:
     path = Path(path)
-    text = path.read_text(encoding="utf-8")
-    return TaskFile(path=path, text=text, tasks=parse_tasks(text))
+    raw = path.read_bytes().decode("utf-8")
+    newline = "\r\n" if "\r\n" in raw else "\n"
+    text = raw.replace("\r\n", "\n")
+    return TaskFile(path=path, text=text, tasks=parse_tasks(text), newline=newline)
 
 
 class _Dumper(yaml.SafeDumper):
@@ -183,7 +186,7 @@ def render_tasks(tf: TaskFile) -> str:
 
 def save_tasks(tf: TaskFile) -> None:
     tf.text = render_tasks(tf)
-    with open(tf.path, "w", encoding="utf-8", newline="\n") as fh:
+    with open(tf.path, "w", encoding="utf-8", newline=tf.newline) as fh:
         fh.write(tf.text)
 
 

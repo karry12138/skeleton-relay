@@ -13,7 +13,14 @@ class ExecutorConfig:
     kind: str = "aider"
     base_url: str = ""
     model: str = ""
+    api_key: str = "sk-local"
     max_attempts: int = 3
+    edit_format: str = "diff"
+    thinking: bool = False
+    temperature: float = 0.0
+    max_tokens: int = 32768
+    context_window: int = 1048576
+    timeout: int = 900
 
 
 @dataclass

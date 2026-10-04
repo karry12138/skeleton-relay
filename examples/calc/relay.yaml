@@ -1,0 +1,24 @@
+skeleton_tag: skeleton-v1
+tasks_file: TASKS.md
+test_cmd: python -m pytest -q {acceptance}
+
+protected:
+- SPEC.md
+- relay.yaml
+- pytest.ini
+- tests/*
+- src/calc/tokens.py
+- src/calc/nodes.py
+- src/calc/errors.py
+- src/calc/__init__.py
+
+executor:
+  kind: aider
+  base_url: http://<vllm-host>:8888/v1
+  model: deepseek-v4-flash-vision-exp
+  max_attempts: 3
+  edit_format: diff
+  thinking: false
+  temperature: 0.0
+  max_tokens: 32768
+  context_window: 1048576

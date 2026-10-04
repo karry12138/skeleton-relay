@@ -11,6 +11,11 @@ protected:
 
 executor:
   kind: aider                      # aider | dsh
-  base_url: http://<vllm-host>/v1
+  base_url: http://<vllm-host>:8888/v1   # vLLM；需绕过本机代理直连
   model: deepseek-v4-flash-vision-exp
   max_attempts: 3
+  edit_format: diff
+  thinking: false                  # 服务端默认思考强度 high；开启时务必设 temperature
+  temperature: 0.0                 # 开启思考时用 0.6，0 会陷入重复直到耗尽 max_tokens
+  max_tokens: 32768
+  context_window: 1048576          # 服务端 max_model_len

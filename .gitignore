@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 logs/
+sandbox/
 .aider*
 !.aider.model.settings.yml
 !.aider.model.metadata.json

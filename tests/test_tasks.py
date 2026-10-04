@@ -62,6 +62,22 @@ def test_save_updates_only_task_blocks(tmp_path):
     assert reloaded.last_error == "AssertionError: 1 != 2\n  at line 3"
 
 
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_save_preserves_newline_style(tmp_path, newline):
+    path = tmp_path / "TASKS.md"
+    path.write_bytes(("# T\n\n" + block(MINIMAL)).replace("\n", newline).encode("utf-8"))
+    save_tasks(load_tasks(path))
+    original = path.read_bytes()
+    assert original.count(newline.encode()) == original.count(b"\n")
+
+    tf = load_tasks(path)
+    tf.get("A").status = "done"
+    save_tasks(tf)
+    before, after = original.split(b"\n"), path.read_bytes().split(b"\n")
+    assert len(before) == len(after)
+    assert [a for a, b in zip(after, before) if a != b] == [("status: done" + newline).rstrip("\n").encode()]
+
+
 @pytest.mark.parametrize(
     "body, message",
     [

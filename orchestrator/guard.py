@@ -20,7 +20,7 @@ class GitError(RuntimeError):
     pass
 
 
-def _git(root: Path, *args: str) -> str:
+def run_git(root: Path, *args: str) -> str:
     proc = subprocess.run(
         ["git", "-c", "core.quotepath=off", *args],
         cwd=root,
@@ -39,14 +39,14 @@ def _norm(path: str) -> str:
 
 def changed_files(root: Path, ref: str) -> set[str]:
     """工作区（含未跟踪文件）相对 ref 发生变化的文件。"""
-    tracked = _git(root, "diff", "--name-only", ref, "--").splitlines()
-    untracked = _git(root, "ls-files", "--others", "--exclude-standard").splitlines()
+    tracked = run_git(root, "diff", "--name-only", ref, "--").splitlines()
+    untracked = run_git(root, "ls-files", "--others", "--exclude-standard").splitlines()
     return {_norm(p) for p in tracked + untracked if p}
 
 
 def file_at(root: Path, ref: str, path: str) -> str | None:
     try:
-        return _git(root, "show", f"{ref}:{_norm(path)}")
+        return run_git(root, "show", f"{ref}:{_norm(path)}")
     except GitError:
         return None
 
