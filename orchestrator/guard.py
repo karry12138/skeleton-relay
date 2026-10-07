@@ -1,6 +1,7 @@
 """任务完成后的接口保护检查。
 
-- 整文件冻结：read_only 与 protected 中的文件相对骨架 tag 不得有任何改动。
+- 整文件冻结：protected 中的文件相对骨架 tag 不得有任何改动；read_only 中的文件相对任务开始前的提交
+  不得有任何改动（上游任务已实现的模块可以作为只读参考）。
 - 越界修改：相对任务开始前的提交，只允许 files 中的文件发生变化。
 - 签名冻结：files 中的 .py 文件，骨架里已有的符号签名不得改动或删除，不得新增公开符号。
 """
@@ -121,8 +122,11 @@ def check_task(root: str | Path, task: Task, config: RelayConfig, base_ref: str)
     errors = []
 
     for path in sorted(changed_files(root, tag)):
-        if _matches(path, frozen):
+        if _matches(path, config.protected):
             errors.append(f"{path}：冻结文件相对 {tag} 被改动")
+    for path in sorted(changed_files(root, base_ref)):
+        if _matches(path, task.read_only) and not _matches(path, config.protected):
+            errors.append(f"{path}：冻结文件（只读参考）在本任务中被改动")
 
     ignored = {_norm(config.tasks_file)}
     for path in sorted(changed_files(root, base_ref) - allowed - ignored):

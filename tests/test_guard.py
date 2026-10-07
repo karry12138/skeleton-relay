@@ -173,6 +173,24 @@ def test_earlier_task_changes_do_not_count_as_out_of_scope(project):
     assert run_check(project) == []
 
 
+def test_read_only_implemented_by_earlier_task(project):
+    write(project, "src/types.py", "KINDS = ('NUMBER', 'PLUS')\n")
+    git(project, "commit", "-qam", "T000")
+    write(project, "src/lexer.py", IMPLEMENTED)
+    assert run_check(project) == []
+    write(project, "src/types.py", "KINDS = ()\n")
+    assert any("src/types.py：冻结文件" in e for e in run_check(project))
+
+
+def test_protected_measured_from_tag(project):
+    config = RelayConfig(protected=["SPEC.md"])
+    write(project, "SPEC.md", "# SPEC v2\n")
+    git(project, "commit", "-qam", "T000")
+    task = load_tasks(project / "TASKS.md").get("T001")
+    errors = check_task(project, task, config, "HEAD")
+    assert any("SPEC.md：冻结文件相对 skeleton-v1" in e for e in errors), errors
+
+
 def test_cli_check(project, capsys):
     write(project, "src/lexer.py", SKELETON.replace("strict: bool", "strict: int"))
     assert main(["check", "T001", str(project)]) == 1
